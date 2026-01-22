@@ -262,7 +262,6 @@ class GetMatches(Resource):
 # Add GetMatches method to the routing system. 
 api.add_resource(GetMatches, '/get_matches', endpoint='get_matches')
 
-# TODO: If you are banned or deactivated, your request cannot be activated
 # GET request
 # Fields
 # -- password | Encrypted user password.
