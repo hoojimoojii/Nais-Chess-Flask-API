@@ -1,4 +1,5 @@
 from flask import make_response, request
+# Import a class that is inherited to create an API endpoint
 from flask_restful import Resource
 from sqlalchemy import asc
 import random
@@ -177,12 +178,12 @@ class Matchmaking(Resource):
         # If a suitable opponent has been found
         found_opponent = False
         # Increment in the elo range of matchmaking each loop 
-        increment = 40
+        increment = 10
         # How much loops there will be before giving up
         timeout = 20
         # Variable to keep track of the number of loops
         count = 0
-        # Set the scope of allowed users be returned in this function
+        # Set the scope of allowed users
         allowed_user_query = User.query.filter((User.isactivated == True) & (User.isbanned == False) & (User.ishidden == False) & (User.id != user.id))
         while(not found_opponent):
             # List of all the suitable opponents inside the elo range
@@ -289,7 +290,8 @@ class AcceptMatchRequest(Resource):
         # Validate if the match_request exists
         if not match_request:
             return make_response({'error': "Cannot find the match"}, 422)
-        if((not user.isadmin) and (user.id != match_request.user2_id)):
+        # Verify that the player has the permission
+        if((not user.ismanager) and (user.id != match_request.user2_id)):
             return make_response({'error': "You don't have the permission to make this request"}, 422)
         # Create a match instance
         match = Match(
@@ -338,6 +340,9 @@ class RejectMatchRequest(Resource):
         # Validate if the match_request exists
         if not match_request:
             return make_response({'error': "Cannot find the match"}, 422)
+        # Verify that the player has the permission
+        if((not user.ismanager) and (user.id != match_request.user2_id)):
+            return make_response({'error': "You don't have the permission to make this request"}, 422)
         # Perform DELETE operation for the match request
         db.session.delete(match_request)
         # Commit database changes
@@ -381,7 +386,7 @@ api.add_resource(GetUsers, '/users', endpoint='users')
 class AdminInspect(Resource):
     def get(self):
         # Set the scope of allowed users to call this function
-        allowed_user_query = User.query.filter((User.isbanned == False) & (User.isadmin == True))
+        allowed_user_query = User.query.filter((User.isbanned == False) & ((User.isadmin == True) | (User.ismanager == True)))
         # Get the parameters of this request
         json = request.get_json()
         # Obtain the username from the request
@@ -392,7 +397,7 @@ class AdminInspect(Resource):
         user:User = allowed_user_query.filter((User._password_hash == password) & (User.username == username)).first()
         # Check if the user is authorized
         if not user:
-            return make_response({'error': "Unauthorized: you must be logged in to make that request"}, 401)
+            return make_response({'error': "Unauthorized: you don't have the required permission"}, 401)
         # Obtain the id of the user getting inspected
         inspect_id = int(json.get('inspect', ""))
         inspect:User = User.query.get(inspect_id)
@@ -421,7 +426,7 @@ api.add_resource(AdminInspect, '/a_inspect', endpoint='a_inspect')
 class AdminGetUsers(Resource):
     def get(self):
         # Set the scope of allowed users to call this function
-        allowed_user_query = User.query.filter((User.isbanned == False) & (User.isadmin == True))
+        allowed_user_query = User.query.filter((User.isbanned == False) & ((User.isadmin == True) | (User.ismanager == True)))
         # Get the parameters of this request
         json = request.get_json()
         # Obtain the username from the request
@@ -432,7 +437,7 @@ class AdminGetUsers(Resource):
         user:User = allowed_user_query.filter((User._password_hash == password) & (User.username == username)).first()
         # Check if the user is authorized
         if not user:
-            return make_response({'error': "Unauthorized: you must be logged in to make that request"}, 401)
+            return make_response({'error': "Unauthorized: you don't have the required permission"}, 401)
         # Find all users from the query (who are activated and not hidden)
         users = User.query.filter().all()
         # Reverse Sort all users by their elo
@@ -463,7 +468,7 @@ class AdminBan(Resource):
         user:User = allowed_user_query.filter((User._password_hash == password) & (User.username == username)).first()
         # Check if the user is authorized
         if not user:
-            return make_response({'error': "Unauthorized: you must be logged in to make that request"}, 401)
+            return make_response({'error': "Unauthorized: you don't have the required permission"}, 401)
         target = User.query.filter(User.isadmin == False).filter((User.id == target_id)).first()
         if not target:
             return make_response({'error': "Ban target is not specified"}, 401)
@@ -494,7 +499,7 @@ class AdminHide(Resource):
         user:User = allowed_user_query.filter((User._password_hash == password) & (User.username == username)).first()
         # Check if the user is authorized
         if not user:
-            return make_response({'error': "Unauthorized: you must be logged in to make that request"}, 401)
+            return make_response({'error': "Unauthorized: you don't have the required permission"}, 401)
         target = User.query.filter((User.id == target_id)).first()
         if not target:
             return make_response({'error': "Hiding target is not specified"}, 401)

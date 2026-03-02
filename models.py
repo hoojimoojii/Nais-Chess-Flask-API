@@ -16,6 +16,7 @@ class User(db.Model):
     isactivated = db.Column(db.Boolean, server_default='t', default=True) # Is the account activated?
     ishidden = db.Column(db.Boolean, server_default='f', default=False) # Is the account hidden?
     isbanned = db.Column(db.Boolean, server_default='f', default=False) # Is the account banned?
+    ismanager = db.Column(db.Boolean, server_default='f', default=False) # Is this an admin account?
     isadmin = db.Column(db.Boolean, server_default='f', default=False) # Is this an admin account?
     elo = db.Column(db.Integer, server_default='300', default=300) # User's current elo score
     _password_hash = db.Column(db.String) # Encrypted version of the password
@@ -39,6 +40,7 @@ class User(db.Model):
             "isadmin": self.isadmin,
             "ishidden": self.ishidden,
             "isbanned": self.isbanned,
+            "ismanager": self.ismanager,
             "elo": self.elo
         }
 
@@ -53,6 +55,7 @@ class User(db.Model):
             "isadmin": self.isadmin,
             "ishidden": self.ishidden,
             "isbanned": self.isbanned,
+            "ismanager": self.ismanager,
             "elo": self.elo
         }
 
@@ -81,7 +84,7 @@ class User(db.Model):
         qA = 10 ** (rA / 400)
         qB = 10 ** (rB / 400)
         eA = qA / (qA + qB)
-        self.elo = int(self.elo + 40 * (sA-eA+0.1))
+        self.elo = int(self.elo + 40 * (sA-eA))
         if(self.elo < 0):
             self.elo = 0
         db.session.commit()
